@@ -1,13 +1,27 @@
 var FPS = 30;
 var nn;
-var td;
+var td = [
+  { x: [1, 0], y: [0, 0, 1] },
+  { x: [0, 1], y: [0, 1, 1] },
+  { x: [1, 1], y: [1, 0, 0] },
+];
 
 function start() {
-  nn = new NeuralNetwork([1, 2, 3]);
+  nn = new NeuralNetwork([2, 2, 2, 3]);
 }
 
 function loop(dt) {
-
+  __.text(
+    td.map(d => nn.error(d).map(x => x * x).reduce((x, y) => x + y)).reduce((x, y) => x + y),
+    100, 60, 'white', 30
+  );
+  td.map((d, i) =>
+    __.text(
+      d.x.join(', ') + ': ' + nn.run(d.x).map(x=>Math.floor(x*10000)/10000).join(', ') + ' / ' + d.y.join(', '),
+      100, 100 + i * 40, 'white', 30
+    )
+  );
+  td.map(d => nn.train(d));
 }
 
 class NeuralNetwork {
@@ -25,7 +39,7 @@ class NeuralNetwork {
   }
 
   run(fninput) {
-    var input = fninput;
+    var input = structuredClone(fninput);
     this.bpact = [];
     for (var l of this.layers) {
       input.push(1);
@@ -44,11 +58,11 @@ class NeuralNetwork {
     var error = [this.error(input)];
     var grad = [];
 
-    for (let i = this.layers.length - 1; i >= 0; i--) {
-      grad.unshift(error[0].map((e, j) => e * aFnDeriv(this.bpact[i + 1][j])));
+    for (var i = this.layers.length - 1; i >= 0; i--) {
+      grad.unshift(error[0].map((e, j) => e * (this.bpact[i + 1][j])));
       if (i > 0) {
         var herror = [];
-        for (var j = 0; j < this.layers[i]; j++) {
+        for (var j = 0; j < this.layers[i].length; j++) {
           var sum = 0;
           for (var k = 0; k < this.layers[i][j].length; k++) {
             sum += grad[0][k] * this.layers[i][j][k];
@@ -59,11 +73,11 @@ class NeuralNetwork {
       }
     }
 
-    for (let i = 0; i < this.layers.length; i++) {
+    for (var i = 0; i < this.layers.length; i++) {
       var inputs = this.bpact[i];
-      for (var j = 0; j < this.layers[i]; j++) {
+      for (var j = 0; j < this.layers[i].length; j++) {
         for (var k = 0; k < this.layers[i][j].length; k++) {
-          this.layers[i][j][k] += inputs[j] * grad[i] * this.learnRate;
+          this.layers[i][j][k] += inputs[j] * grad[i][k] * this.learnRate;
         }
       }
     }
@@ -79,7 +93,7 @@ function aFnDeriv(x) {
 }
 
 function dotarr(a, b) {
-  return a.map((x, y) => x * b[y]).reduce((x, y) => x + y)
+  return a.map((x, y) => x * b[y]).reduce((x, y) => (x||0) + (y||0))
 }
 
 ge.start();
